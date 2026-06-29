@@ -10,33 +10,115 @@
         mode="horizontal"
         :items="menuItems"
         class="menu"
+        @click="handleMenuClick"
       />
       <div class="user-section">
-        <a-button type="primary">登录</a-button>
+        <div v-if="loginUserStore.loginUser.id">
+          <a-dropdown>
+            <a-space style="cursor: pointer">
+              <a-avatar :src="loginUserStore.loginUser.userAvatar" />
+              {{ loginUserStore.loginUser.userName ?? '无名' }}
+            </a-space>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item @click="doLogout">
+                  <LogoutOutlined />
+                  退出登录
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
+        </div>
+        <div v-else>
+          <a-button type="primary" @click="router.push('/user/login')">登录</a-button>
+        </div>
       </div>
     </div>
   </a-layout-header>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, h, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
+import type { MenuProps } from 'ant-design-vue'
+import { HomeOutlined, LogoutOutlined } from '@ant-design/icons-vue'
+import { useLoginUserStore } from '@/stores/loginUser.ts'
+import { userLogout } from '@/api/userController.ts'
+import checkAccess from '@/access/checkAccess'
+
+//获取登录用户状态
+const loginUserStore = useLoginUserStore()
 
 const router = useRouter()
 const selectedKeys = ref<string[]>(['home'])
 
-const menuItems = [
+// 用户退出登录
+const doLogout = async () => {
+  const res = await userLogout()
+  if (res.data.code === 0) {
+    loginUserStore.setLoginUser({
+      userName: '未登录',
+    })
+    message.success('退出登录成功')
+    await router.push('/user/login')
+  } else {
+    message.error('退出登录失败，' + res.data.message)
+  }
+}
+
+// 菜单配置项
+const originItems = [
   {
-    key: 'home',
-    label: 'Home',
-    onClick: () => router.push('/')
+    key: '/',
+    icon: () => h(HomeOutlined),
+    label: '主页',
+    title: '主页',
   },
   {
-    key: 'about',
-    label: 'About',
-    onClick: () => router.push('/about')
-  }
+    key: '/admin/userManage',
+    label: '用户管理',
+    title: '用户管理',
+  },
 ]
+
+// 根据菜单 key 找到对应的路由项
+const menuToRouteItem = (menuKey: string) => {
+  return router
+    .getRoutes()
+    .find((route) => route.path === menuKey)
+}
+
+// 过滤菜单项
+const filterMenus = (menus = [] as MenuProps['items']) => {
+  return menus?.filter((menu) => {
+    const menuKey = menu?.key as string
+    const routeItem = menuToRouteItem(menuKey)
+    // 路由配置中标记了 hideInMenu 则不展示
+    if (routeItem?.meta?.hideInMenu) {
+      return false
+    }
+    // 根据权限过滤，有权限则保留该菜单
+    if (routeItem?.meta?.access) {
+      return checkAccess(
+        loginUserStore.loginUser,
+        routeItem.meta.access as string,
+      )
+    }
+    // 没有配置 access 的菜单默认展示
+    return true
+  })
+}
+
+// 展示在菜单的路由数组
+const menuItems = computed<MenuProps['items']>(() => filterMenus(originItems))
+
+// 菜单点击
+const handleMenuClick = ({ key }: { key: string }) => {
+  if (key.startsWith('/')) {
+    router.push(key)
+  }
+}
 </script>
 
 <style scoped>
