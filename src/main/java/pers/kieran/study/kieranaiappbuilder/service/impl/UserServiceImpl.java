@@ -77,7 +77,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
         }
         LoginUserVO loginUserVO = new LoginUserVO();
         BeanUtil.copyProperties(user,loginUserVO);
-        return null;
+        return loginUserVO;
     }
 
     @Override
