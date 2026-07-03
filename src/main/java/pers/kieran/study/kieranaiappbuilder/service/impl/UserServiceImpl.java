@@ -9,7 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.DigestUtils;
 import pers.kieran.study.kieranaiappbuilder.exception.BusinessException;
 import pers.kieran.study.kieranaiappbuilder.exception.ErrorCode;
-import pers.kieran.study.kieranaiappbuilder.model.dto.UserQueryRequest;
+import pers.kieran.study.kieranaiappbuilder.model.dto.user.UserQueryRequest;
 import pers.kieran.study.kieranaiappbuilder.model.entity.User;
 import pers.kieran.study.kieranaiappbuilder.mapper.UserMapper;
 import pers.kieran.study.kieranaiappbuilder.model.enums.UserRoleEnum;

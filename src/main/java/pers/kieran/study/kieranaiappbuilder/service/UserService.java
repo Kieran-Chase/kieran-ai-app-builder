@@ -3,7 +3,7 @@ package pers.kieran.study.kieranaiappbuilder.service;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
 import jakarta.servlet.http.HttpServletRequest;
-import pers.kieran.study.kieranaiappbuilder.model.dto.UserQueryRequest;
+import pers.kieran.study.kieranaiappbuilder.model.dto.user.UserQueryRequest;
 import pers.kieran.study.kieranaiappbuilder.model.entity.User;
 import pers.kieran.study.kieranaiappbuilder.model.vo.LoginUserVO;
 import pers.kieran.study.kieranaiappbuilder.model.vo.UserVO;

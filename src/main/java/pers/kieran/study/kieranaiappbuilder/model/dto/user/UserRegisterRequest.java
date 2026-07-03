@@ -1,4 +1,4 @@
-package pers.kieran.study.kieranaiappbuilder.model.dto;
+package pers.kieran.study.kieranaiappbuilder.model.dto.user;
 
 import lombok.Data;
 
@@ -11,12 +11,12 @@ import java.io.Serializable;
  */
 
 /**
- * 用户登录
+ * 用户注册请求
  */
 @Data
-public class UserLoginRequest implements Serializable {
+public class UserRegisterRequest implements Serializable {
 
-    private static final long serialVersionUID = 3191241716373120793L;
+    private static final long serialVersionUID = 1L;
 
     /**
      * 账号
@@ -27,4 +27,9 @@ public class UserLoginRequest implements Serializable {
      * 密码
      */
     private String userPassword;
+
+    /**
+     * 确认密码
+     */
+    private String checkPassword;
 }

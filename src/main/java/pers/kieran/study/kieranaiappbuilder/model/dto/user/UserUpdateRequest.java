@@ -1,4 +1,4 @@
-package pers.kieran.study.kieranaiappbuilder.model.dto;
+package pers.kieran.study.kieranaiappbuilder.model.dto.user;
 
 import lombok.Data;
 

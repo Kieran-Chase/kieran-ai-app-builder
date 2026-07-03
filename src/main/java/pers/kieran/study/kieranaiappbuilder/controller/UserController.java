@@ -16,7 +16,7 @@ import pers.kieran.study.kieranaiappbuilder.constant.UserConstant;
 import pers.kieran.study.kieranaiappbuilder.exception.BusinessException;
 import pers.kieran.study.kieranaiappbuilder.exception.ErrorCode;
 import pers.kieran.study.kieranaiappbuilder.exception.ThrowUtils;
-import pers.kieran.study.kieranaiappbuilder.model.dto.*;
+import pers.kieran.study.kieranaiappbuilder.model.dto.user.*;
 import pers.kieran.study.kieranaiappbuilder.model.entity.User;
 import pers.kieran.study.kieranaiappbuilder.model.vo.LoginUserVO;
 import pers.kieran.study.kieranaiappbuilder.model.vo.UserVO;
