@@ -80,6 +80,11 @@ const originItems = [
     label: '用户管理',
     title: '用户管理',
   },
+  {
+    key: '/admin/appManage',
+    label: '应用管理',
+    title: '应用管理',
+  },
 ]
 
 // 根据菜单 key 找到对应的路由项
