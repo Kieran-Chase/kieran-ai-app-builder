@@ -85,6 +85,11 @@ const originItems = [
     label: '应用管理',
     title: '应用管理',
   },
+  {
+    key: '/admin/chatHistoryManage',
+    label: '对话管理',
+    title: '对话管理',
+  },
 ]
 
 // 根据菜单 key 找到对应的路由项

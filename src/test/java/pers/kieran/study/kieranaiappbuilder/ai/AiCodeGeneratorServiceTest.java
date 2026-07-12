@@ -29,4 +29,7 @@ class AiCodeGeneratorServiceTest {
         MultiFileCodeResult result = aiCodeGeneratorService.generateMultiFileCode("生成一个程序员 Kieran 的留言板，不超过50行");
         Assertions.assertNotNull(result);
     }
+
+
+
 }

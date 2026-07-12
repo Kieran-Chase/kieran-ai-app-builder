@@ -1,6 +1,8 @@
 package pers.kieran.study.kieranaiappbuilder.ai;
 
+import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
+import dev.langchain4j.service.UserMessage;
 import pers.kieran.study.kieranaiappbuilder.ai.model.HtmlCodeResult;
 import pers.kieran.study.kieranaiappbuilder.ai.model.MultiFileCodeResult;
 import reactor.core.publisher.Flux;
@@ -18,7 +20,7 @@ public interface AiCodeGeneratorService {
      * @return AI 的输出结果
      */
     @SystemMessage(fromResource = "prompt/codegen-html-system-prompt.txt")
-    HtmlCodeResult generateHtmlCode(String userMessage);
+    HtmlCodeResult generateHtmlCode( String userMessage);
 
     /**
      * 生成多文件代码

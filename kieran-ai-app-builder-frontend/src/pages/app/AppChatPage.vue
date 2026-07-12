@@ -10,6 +10,7 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons-vue'
 import { getAppVoById, deployApp, deleteApp } from '@/api/appController.ts'
+import { listAppChatHistory } from '@/api/chatHistoryController.ts'
 import { formatTime } from '@/utils/time'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { API_BASE_URL, getStaticPreviewUrl } from '@/config/env'
@@ -21,6 +22,8 @@ interface ChatMessage {
   role: 'user' | 'ai'
   content: string
   loading?: boolean
+  /** 消息创建时间，来自后端；用于游标分页。新发送的消息无此字段 */
+  createTime?: string
 }
 
 const route = useRoute()
@@ -31,8 +34,6 @@ const loginUserStore = useLoginUserStore()
 const appId = computed(() => route.params.id as string)
 // 应用信息
 const app = ref<API.AppVO>()
-// 是否为新创建的应用（需要自动发送初始提示词）
-const isNew = computed(() => route.query.isNew === '1')
 
 // 应用详情弹窗
 const detailModalOpen = ref(false)
@@ -44,9 +45,23 @@ const canEdit = computed(() => {
   }
   return app.value.userId === loginUser.id || loginUser.userRole === 'admin'
 })
+// 是否为应用所有者
+const isOwner = computed(() => {
+  const loginUser = loginUserStore.loginUser
+  if (!loginUser.id || !app.value) {
+    return false
+  }
+  return app.value.userId === loginUser.id
+})
 
-// 消息列表
+// 消息列表（按时间升序展示）
 const messages = ref<ChatMessage[]>([])
+// 是否还有更早的历史消息（游标分页）
+const hasMore = ref(false)
+// 是否正在加载更早的消息
+const loadingMore = ref(false)
+// 历史消息是否已加载完成（首次加载）
+const historyLoaded = ref(false)
 // 用户输入
 const userInput = ref('')
 // AI 是否正在生成
@@ -78,6 +93,70 @@ const fetchApp = async () => {
     app.value = res.data.data
   } else {
     message.error('获取应用信息失败，' + res.data.message)
+  }
+}
+
+// 加载对话历史（游标分页）
+const loadChatHistory = async (cursor?: string) => {
+  const res = await listAppChatHistory({
+    appId: toAppId(appId.value),
+    pageSize: 10,
+    ...(cursor ? { lastCreateTime: cursor } : {}),
+  })
+  if (res.data.code === 0 && res.data.data) {
+    const records = res.data.data.records ?? []
+    // 按创建时间升序排列（旧 → 新）
+    const sorted = [...records].sort((a, b) =>
+      (a.createTime || '').localeCompare(b.createTime || ''),
+    )
+    const historyMessages: ChatMessage[] = sorted.map((r) => ({
+      role: r.messageType === 'user' ? 'user' : 'ai',
+      content: r.message || '',
+      createTime: r.createTime,
+    }))
+
+    if (cursor) {
+      // 加载更早的消息：前置插入
+      messages.value = [...historyMessages, ...messages.value]
+    } else {
+      // 首次加载
+      messages.value = historyMessages
+    }
+
+    // 返回满一页说明可能还有更多
+    hasMore.value = records.length >= 10
+  } else {
+    message.error('加载对话历史失败，' + res.data.message)
+  }
+}
+
+// 加载更早的历史消息
+const loadMore = async () => {
+  if (messages.value.length === 0 || loadingMore.value) {
+    return
+  }
+  // 以当前列表中最旧消息的 createTime 作为游标
+  const cursor = messages.value[0].createTime
+  if (!cursor) {
+    hasMore.value = false
+    return
+  }
+
+  loadingMore.value = true
+  try {
+    // 记录加载前滚动高度，便于加载后保持滚动位置
+    const el = messagesRef.value
+    const oldScrollHeight = el?.scrollHeight ?? 0
+
+    await loadChatHistory(cursor)
+
+    // 恢复滚动位置，让用户看到连续的消息
+    await nextTick()
+    if (el) {
+      el.scrollTop = el.scrollHeight - oldScrollHeight
+    }
+  } finally {
+    loadingMore.value = false
   }
 }
 
@@ -224,15 +303,19 @@ const doDelete = () => {
 }
 
 onMounted(async () => {
-  await fetchApp()
+  // 并行获取应用信息与对话历史
+  await Promise.all([fetchApp(), loadChatHistory()])
+  historyLoaded.value = true
+
   if (!app.value) {
     return
   }
-  // 新创建的应用：自动发送初始提示词
-  if (isNew.value && app.value.initPrompt) {
+
+  // 如果是自己的应用，且没有对话历史，才自动发送初始提示词
+  if (isOwner.value && messages.value.length === 0 && app.value.initPrompt) {
     sendMessage(app.value.initPrompt)
-  } else {
-    // 已有应用：直接展示已生成的网页
+  } else if (messages.value.length >= 2) {
+    // 有至少 2 条对话记录时，展示对应的网站
     showPreview()
   }
 })
@@ -271,6 +354,12 @@ onUnmounted(() => {
       <!-- 左侧对话区域 -->
       <div class="chat-panel">
         <div ref="messagesRef" class="messages">
+          <!-- 加载更早消息 -->
+          <div v-if="hasMore" class="load-more-area">
+            <a-button :loading="loadingMore" size="small" block @click="loadMore">
+              加载更早的对话
+            </a-button>
+          </div>
           <div
             v-for="(msg, index) in messages"
             :key="index"
@@ -294,7 +383,10 @@ onUnmounted(() => {
               :src="loginUserStore.loginUser.userAvatar"
             />
           </div>
-          <a-empty v-if="messages.length === 0" description="开始和 AI 对话生成应用吧" />
+          <a-empty
+            v-if="messages.length === 0 && historyLoaded"
+            description="开始和 AI 对话生成应用吧"
+          />
         </div>
 
         <!-- 用户消息输入框 -->
@@ -434,6 +526,11 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+}
+
+.load-more-area {
+  text-align: center;
+  margin-bottom: 12px;
 }
 
 .message-item {
