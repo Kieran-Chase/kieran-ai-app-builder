@@ -136,7 +136,7 @@ const loadMore = async () => {
     return
   }
   // 以当前列表中最旧消息的 createTime 作为游标
-  const cursor = messages.value[0].createTime
+  const cursor = messages.value[0]?.createTime
   if (!cursor) {
     hasMore.value = false
     return

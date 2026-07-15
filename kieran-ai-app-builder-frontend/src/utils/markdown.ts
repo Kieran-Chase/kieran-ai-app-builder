@@ -4,8 +4,18 @@ import DOMPurify from 'dompurify'
 
 /**
  * Markdown 渲染器（带代码语法高亮）
- * 用于渲染 AI 流式返回的内容，让 html / css / js 等代码块以独立的高亮代码框展示
+ * 用于渲染 AI 流式返回的内容，让 html / css / js / vue 等代码块以独立的高亮代码框展示
  */
+const normalizeHighlightLanguage = (lang: string) => {
+  const normalizedLang = lang.toLowerCase()
+  const langAliasMap: Record<string, string> = {
+    vue: 'xml',
+    js: 'javascript',
+    ts: 'typescript',
+  }
+  return langAliasMap[normalizedLang] ?? normalizedLang
+}
+
 const md = new MarkdownIt({
   // 允许识别 URL 自动转链接
   linkify: true,
@@ -13,11 +23,13 @@ const md = new MarkdownIt({
   breaks: true,
   // 代码块高亮
   highlight(code: string, lang: string): string {
-    if (lang && hljs.getLanguage(lang)) {
+    const displayLang = lang || ''
+    const highlightLang = lang ? normalizeHighlightLanguage(lang) : ''
+    if (highlightLang && hljs.getLanguage(highlightLang)) {
       try {
-        const highlighted = hljs.highlight(code, { language: lang, ignoreIllegals: true }).value
+        const highlighted = hljs.highlight(code, { language: highlightLang, ignoreIllegals: true }).value
         // 外层包裹带语言标签的容器，样式在 AppChatPage 中定义
-        return `<pre class="hljs-pre"><div class="hljs-lang">${lang}</div><code class="hljs">${highlighted}</code></pre>`
+        return `<pre class="hljs-pre"><div class="hljs-lang">${displayLang}</div><code class="hljs">${highlighted}</code></pre>`
       } catch {
         // 高亮失败则降级为纯文本
       }

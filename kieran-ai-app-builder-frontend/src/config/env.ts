@@ -1,3 +1,5 @@
+import { CodeGenTypeEnum } from '@/constant/app'
+
 /**
  * 全局环境配置
  */
@@ -21,5 +23,10 @@ export const getDeployUrl = (deployKey: string) => {
  * 完整地址格式：{API_BASE_URL}/static/{codeGenType}_{appId}/
  */
 export const getStaticPreviewUrl = (codeGenType: string, appId: number | string) => {
-  return `${API_BASE_URL}/static/${codeGenType}_${appId}/`
+  const baseUrl = `${API_BASE_URL}/static/${codeGenType}_${appId}/`
+  // Vue 工程构建产物在 dist 目录下，浏览时需要访问 dist/index.html
+  if (codeGenType === CodeGenTypeEnum.VUE_PROJECT) {
+    return `${baseUrl}dist/index.html`
+  }
+  return baseUrl
 }

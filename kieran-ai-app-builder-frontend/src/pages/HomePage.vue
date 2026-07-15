@@ -7,14 +7,19 @@ import { addApp, listMyAppVoByPage, listGoodAppVoByPage } from '@/api/appControl
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import ACCESS_ENUM from '@/access/accessEnum'
 import AppCard from '@/components/AppCard.vue'
+import { CODE_GEN_TYPE_CONFIG, CodeGenTypeEnum } from '@/constant/app'
 
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
 
 // 用户输入的提示词
 const initPrompt = ref('')
+// 选择的代码生成类型
+const selectedCodeGenType = ref<string>(CodeGenTypeEnum.VUE_PROJECT)
 // 创建应用加载态
 const creating = ref(false)
+// 代码生成类型选项
+const codeGenTypeOptions = Object.values(CODE_GEN_TYPE_CONFIG)
 
 // 提示词示例（点击快速填充）
 const promptExamples = ['波普风电商页面', '企业网站', '电商运营后台', '暗黑话题社区']
@@ -45,7 +50,10 @@ const doCreateApp = async () => {
   }
   creating.value = true
   try {
-    const res = await addApp({ initPrompt: prompt })
+    const res = await addApp({
+      initPrompt: prompt,
+      codeGenType: selectedCodeGenType.value,
+    })
     if (res.data.code === 0 && res.data.data) {
       message.success('创建成功，开始生成应用')
       // 跳转到对话页，并携带 isNew 标记以自动发送初始提示词
@@ -133,6 +141,17 @@ onMounted(() => {
         :bordered="false"
         class="prompt-input"
       />
+      <div class="code-gen-type">
+        <a-radio-group v-model:value="selectedCodeGenType" button-style="solid">
+          <a-radio-button
+            v-for="option in codeGenTypeOptions"
+            :key="option.value"
+            :value="option.value"
+          >
+            {{ option.label }}
+          </a-radio-button>
+        </a-radio-group>
+      </div>
       <div class="prompt-actions">
         <a-button type="primary" shape="circle" :loading="creating" @click="doCreateApp">
           <template #icon>
@@ -243,6 +262,10 @@ onMounted(() => {
   margin-top: 8px;
 }
 
+.code-gen-type {
+  margin-top: 12px;
+}
+
 .prompt-examples {
   display: flex;
   flex-wrap: wrap;
@@ -272,6 +295,21 @@ onMounted(() => {
 @media (max-width: 768px) {
   .hero-title {
     font-size: 32px;
+  }
+
+  .code-gen-type :deep(.ant-radio-group) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .code-gen-type :deep(.ant-radio-button-wrapper) {
+    border-inline-start-width: 1px;
+    border-radius: 6px;
+  }
+
+  .code-gen-type :deep(.ant-radio-button-wrapper::before) {
+    display: none;
   }
 }
 </style>
