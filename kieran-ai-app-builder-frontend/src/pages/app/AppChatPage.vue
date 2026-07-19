@@ -8,8 +8,9 @@ import {
   InfoCircleOutlined,
   EditOutlined,
   DeleteOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons-vue'
-import { getAppVoById, deployApp, deleteApp } from '@/api/appController.ts'
+import { getAppVoById, deployApp, deleteApp, downloadAppCode } from '@/api/appController.ts'
 import { listAppChatHistory } from '@/api/chatHistoryController.ts'
 import { formatTime } from '@/utils/time'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
@@ -71,6 +72,8 @@ const messagesRef = ref<HTMLElement>()
 
 // 网页预览地址（生成完成后展示）
 const previewUrl = ref('')
+// 下载相关
+const downloading = ref(false)
 // 部署相关
 const deploying = ref(false)
 const deployUrl = ref('')
@@ -173,6 +176,63 @@ const scrollToBottom = () => {
 const showPreview = () => {
   if (app.value?.codeGenType) {
     previewUrl.value = getStaticPreviewUrl(app.value.codeGenType, appId.value)
+  }
+}
+
+// 从响应头中解析下载文件名
+const getDownloadFileName = (contentDisposition?: string) => {
+  if (!contentDisposition) {
+    return `app-${appId.value}`
+  }
+
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1].trim())
+    } catch {
+      return utf8Match[1].trim()
+    }
+  }
+
+  const fileNameMatch = contentDisposition.match(/filename="?([^";]+)"?/i)
+  if (fileNameMatch?.[1]) {
+    return fileNameMatch[1].trim()
+  }
+
+  return `app-${appId.value}`
+}
+
+// 下载应用代码 ZIP
+const doDownload = async () => {
+  downloading.value = true
+  try {
+    const res = await downloadAppCode(
+      { appId: toAppId(appId.value) },
+      { responseType: 'blob' },
+    )
+    if (res.status !== 200) {
+      message.error('下载失败')
+      return
+    }
+
+    const contentDisposition = Array.isArray(res.headers['content-disposition'])
+      ? res.headers['content-disposition'][0]
+      : res.headers['content-disposition']
+    const fileName = getDownloadFileName(contentDisposition)
+    const blob = new Blob([res.data], { type: 'application/zip' })
+    const objectUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = objectUrl
+    link.download = fileName.endsWith('.zip') ? fileName : `${fileName}.zip`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 0)
+    message.success('下载成功')
+  } catch {
+    message.error('下载代码失败')
+  } finally {
+    downloading.value = false
   }
 }
 
@@ -334,13 +394,19 @@ onUnmounted(() => {
         <span class="name-text">{{ app?.appName ?? '加载中...' }}</span>
       </div>
       <div class="header-actions">
-        <a-button @click="detailModalOpen = true">
+        <a-button class="header-action-button" @click="detailModalOpen = true">
           <template #icon>
             <InfoCircleOutlined />
           </template>
           应用详情
         </a-button>
-        <a-button type="primary" :loading="deploying" @click="doDeploy">
+        <a-button class="header-action-button" type="primary" :loading="downloading" @click="doDownload">
+          <template #icon>
+            <DownloadOutlined />
+          </template>
+          下载代码
+        </a-button>
+        <a-button class="header-action-button" type="primary" :loading="deploying" @click="doDeploy">
           <template #icon>
             <CloudUploadOutlined />
           </template>
@@ -492,6 +558,11 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.header-action-button {
+  width: 112px;
+  justify-content: center;
 }
 
 .app-icon {
