@@ -17,6 +17,7 @@ import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { API_BASE_URL, getStaticPreviewUrl } from '@/config/env'
 import { renderMarkdown } from '@/utils/markdown'
 import { toAppId } from '@/utils/appId'
+import { CODE_GEN_TYPE_MAP } from '@/constant/app'
 import 'highlight.js/styles/atom-one-light.css'
 
 interface ChatMessage {
@@ -38,6 +39,14 @@ const app = ref<API.AppVO>()
 
 // 应用详情弹窗
 const detailModalOpen = ref(false)
+// 生成类型展示文本
+const codeGenTypeText = computed(() => {
+  const codeGenType = app.value?.codeGenType
+  if (!codeGenType) {
+    return '未知'
+  }
+  return CODE_GEN_TYPE_MAP[codeGenType] ?? codeGenType
+})
 // 是否有权修改/删除（本人或管理员）
 const canEdit = computed(() => {
   const loginUser = loginUserStore.loginUser
@@ -392,6 +401,7 @@ onUnmounted(() => {
       <div class="app-name">
         <a-avatar class="app-icon">🐱</a-avatar>
         <span class="name-text">{{ app?.appName ?? '加载中...' }}</span>
+        <a-tag v-if="app?.codeGenType" color="blue">{{ codeGenTypeText }}</a-tag>
       </div>
       <div class="header-actions">
         <a-button class="header-action-button" @click="detailModalOpen = true">
@@ -514,6 +524,9 @@ onUnmounted(() => {
         </a-descriptions-item>
         <a-descriptions-item label="创建时间">
           {{ formatTime(app?.createTime) }}
+        </a-descriptions-item>
+        <a-descriptions-item label="生成类型">
+          <a-tag color="blue">{{ codeGenTypeText }}</a-tag>
         </a-descriptions-item>
       </a-descriptions>
       <a-divider style="margin: 12px 0" />

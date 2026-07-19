@@ -7,19 +7,22 @@ import { addApp, listMyAppVoByPage, listGoodAppVoByPage } from '@/api/appControl
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import ACCESS_ENUM from '@/access/accessEnum'
 import AppCard from '@/components/AppCard.vue'
-import { CODE_GEN_TYPE_CONFIG, CodeGenTypeEnum } from '@/constant/app'
+import { CODE_GEN_TYPE_CONFIG } from '@/constant/app'
 
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
 
 // 用户输入的提示词
 const initPrompt = ref('')
-// 选择的代码生成类型
-const selectedCodeGenType = ref<string>(CodeGenTypeEnum.VUE_PROJECT)
+// 选择的代码生成类型，空字符串表示默认模式（AI 自动路由）
+const selectedCodeGenType = ref('')
 // 创建应用加载态
 const creating = ref(false)
 // 代码生成类型选项
-const codeGenTypeOptions = Object.values(CODE_GEN_TYPE_CONFIG)
+const codeGenTypeOptions = [
+  { label: '默认模式', value: '' },
+  ...Object.values(CODE_GEN_TYPE_CONFIG),
+]
 
 // 提示词示例（点击快速填充）
 const promptExamples = ['波普风电商页面', '企业网站', '电商运营后台', '暗黑话题社区']
@@ -52,7 +55,7 @@ const doCreateApp = async () => {
   try {
     const res = await addApp({
       initPrompt: prompt,
-      codeGenType: selectedCodeGenType.value,
+      codeGenType: selectedCodeGenType.value || undefined,
     })
     if (res.data.code === 0 && res.data.data) {
       message.success('创建成功，开始生成应用')

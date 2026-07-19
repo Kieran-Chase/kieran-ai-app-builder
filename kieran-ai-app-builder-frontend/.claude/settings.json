@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/CODE/java_workspace/kieran-ai-app-builder/**)",
+      "Read(//d/CODE/java_workspace/kieran-ai-app-builder/src/main/java/pers/kieran/study/kieranaiappbuilder/service/impl/**)",
+      "Bash(npm run *)"
+    ]
+  }
+}

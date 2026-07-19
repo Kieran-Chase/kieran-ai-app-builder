@@ -9,6 +9,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import pers.kieran.study.kieranaiappbuilder.ai.AiCodeGenTypeRoutingService;
 import pers.kieran.study.kieranaiappbuilder.constant.AppConstant;
 import pers.kieran.study.kieranaiappbuilder.core.AiCodeGeneratorFacade;
 import pers.kieran.study.kieranaiappbuilder.core.builder.VueProjectBuilder;
@@ -16,6 +17,7 @@ import pers.kieran.study.kieranaiappbuilder.core.handler.StreamHandlerExecutor;
 import pers.kieran.study.kieranaiappbuilder.exception.BusinessException;
 import pers.kieran.study.kieranaiappbuilder.exception.ErrorCode;
 import pers.kieran.study.kieranaiappbuilder.exception.ThrowUtils;
+import pers.kieran.study.kieranaiappbuilder.model.dto.app.AppAddRequest;
 import pers.kieran.study.kieranaiappbuilder.model.dto.app.AppQueryRequest;
 import pers.kieran.study.kieranaiappbuilder.model.entity.App;
 import pers.kieran.study.kieranaiappbuilder.mapper.AppMapper;
@@ -67,6 +69,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
     @Resource
     private ScreenshotService screenshotService;
 
+    @Resource
+    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
+
 
     @Override
     public Flux<String> chatToGenCode(Long appId, String message, User loginUser) {
@@ -93,6 +98,35 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         // 7. 收集 AI 咸鱼的内容，并且再完成后保存记录到对话历史
         return streamHandlerExecutor.doExecute(codeStream,chatHistoryService,appId,loginUser,codeGenTypeEnum);
     }
+
+    @Override
+    public Long createApp(AppAddRequest appAddRequest, User loginUser) {
+        // 参数校验
+        String initPrompt = appAddRequest.getInitPrompt();
+        ThrowUtils.throwIf(StrUtil.isBlank(initPrompt), ErrorCode.PARAMS_ERROR, "初始化 prompt 不能为空");
+        // 构造入库对象
+        App app = new App();
+        BeanUtil.copyProperties(appAddRequest, app);
+        app.setUserId(loginUser.getId());
+        // 应用名称暂时为 initPrompt 前 12 位
+        app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
+        // 选择代码生成类型：手动指定则直接使用，未指定则由 AI 智能路由
+        String codeGenType = appAddRequest.getCodeGenType();
+        CodeGenTypeEnum selectedCodeGenType;
+        if (StrUtil.isBlank(codeGenType)) {
+            selectedCodeGenType = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
+        } else {
+            selectedCodeGenType = CodeGenTypeEnum.getEnumByValue(codeGenType);
+            ThrowUtils.throwIf(selectedCodeGenType == null, ErrorCode.PARAMS_ERROR, "代码生成类型错误");
+        }
+        app.setCodeGenType(selectedCodeGenType.getValue());
+        // 插入数据库
+        boolean result = this.save(app);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        log.info("应用创建成功，ID: {}, 类型: {}", app.getId(), selectedCodeGenType.getValue());
+        return app.getId();
+    }
+
 
     @Override
     public String deployApp(Long appId, User loginUser) {
