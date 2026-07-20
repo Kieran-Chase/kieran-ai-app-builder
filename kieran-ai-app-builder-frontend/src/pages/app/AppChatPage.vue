@@ -12,6 +12,8 @@ import {
 } from '@ant-design/icons-vue'
 import { getAppVoById, deployApp, deleteApp, downloadAppCode } from '@/api/appController.ts'
 import { listAppChatHistory } from '@/api/chatHistoryController.ts'
+import useVisualEditor from '@/composables/useVisualEditor'
+import { formatElementInfoForDisplay, formatElementInfoForPrompt } from '@/utils/elementSerializer'
 import { formatTime } from '@/utils/time'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { API_BASE_URL, getStaticPreviewUrl } from '@/config/env'
@@ -78,6 +80,20 @@ const userInput = ref('')
 const generating = ref(false)
 // 消息区域引用（用于自动滚动）
 const messagesRef = ref<HTMLElement>()
+// 预览 iframe 引用（用于可视化编辑）
+const previewIframeRef = ref<HTMLIFrameElement | null>(null)
+
+const {
+  visualEditEnabled,
+  selectedElement,
+  enterEditMode,
+  exitEditMode,
+  clearSelection,
+  handlePreviewLoad,
+} = useVisualEditor(previewIframeRef)
+const selectedElementDescription = computed(() =>
+  selectedElement.value ? formatElementInfoForDisplay(selectedElement.value) : '',
+)
 
 // 网页预览地址（生成完成后展示）
 const previewUrl = ref('')
@@ -245,15 +261,24 @@ const doDownload = async () => {
   }
 }
 
-// 发送消息并通过 SSE 接收 AI 回复
-const sendMessage = (content: string) => {
-  if (generating.value) {
+// 切换可视化编辑模式
+const toggleVisualEdit = () => {
+  if (visualEditEnabled.value) {
+    exitEditMode()
     return
+  }
+  enterEditMode()
+}
+
+// 发送消息并通过 SSE 接收 AI 回复
+const sendMessage = (content: string, backendContent = content) => {
+  if (generating.value) {
+    return false
   }
   const text = content.trim()
   if (!text) {
     message.warning('请输入内容')
-    return
+    return false
   }
   // 追加用户消息
   messages.value.push({ role: 'user', content: text })
@@ -266,7 +291,7 @@ const sendMessage = (content: string) => {
   userInput.value = ''
 
   // 构造 SSE 请求地址（GET 请求，携带 cookie）
-  const url = `${API_BASE_URL}/app/chat/gen/code?appId=${appId.value}&message=${encodeURIComponent(text)}`
+  const url = `${API_BASE_URL}/app/chat/gen/code?appId=${appId.value}&message=${encodeURIComponent(backendContent)}`
   eventSource = new EventSource(url, { withCredentials: true })
 
   // 接收消息片段
@@ -307,6 +332,8 @@ const sendMessage = (content: string) => {
     }
     message.error('生成过程中出现异常')
   }
+
+  return true
 }
 
 // 关闭 SSE 连接
@@ -319,7 +346,14 @@ const closeSSE = () => {
 
 // 用户点击发送
 const handleSend = () => {
-  sendMessage(userInput.value)
+  const text = userInput.value.trim()
+  const backendPrompt = selectedElement.value
+    ? `${text}${formatElementInfoForPrompt(selectedElement.value)}`
+    : text
+
+  if (sendMessage(text, backendPrompt)) {
+    exitEditMode()
+  }
 }
 
 // 部署应用
@@ -467,6 +501,15 @@ onUnmounted(() => {
 
         <!-- 用户消息输入框 -->
         <div class="input-area">
+          <a-alert
+            v-if="selectedElement"
+            class="selected-element-alert"
+            type="info"
+            show-icon
+            closable
+            :message="`已选中元素：${selectedElementDescription}`"
+            @close="clearSelection"
+          />
           <a-textarea
             v-model:value="userInput"
             placeholder="描述越详细，页面越具体，可以一步一步完善生成效果"
@@ -475,6 +518,13 @@ onUnmounted(() => {
             @press-enter.prevent="handleSend"
           />
           <div class="input-actions">
+            <a-button
+              :type="visualEditEnabled ? 'primary' : 'default'"
+              :disabled="!previewUrl || generating"
+              @click="toggleVisualEdit"
+            >
+              {{ visualEditEnabled ? '退出编辑' : '编辑模式' }}
+            </a-button>
             <a-button
               type="primary"
               shape="circle"
@@ -499,7 +549,13 @@ onUnmounted(() => {
           </a-button>
         </div>
         <div class="preview-body">
-          <iframe v-if="previewUrl" :src="previewUrl" class="preview-iframe" />
+          <iframe
+            v-if="previewUrl"
+            ref="previewIframeRef"
+            :src="previewUrl"
+            class="preview-iframe"
+            @load="handlePreviewLoad"
+          />
           <div v-else class="preview-placeholder">
             <a-empty description="网站文件生成完成后将在此展示" />
           </div>
@@ -731,9 +787,14 @@ onUnmounted(() => {
   padding: 12px;
 }
 
+.selected-element-alert {
+  margin-bottom: 8px;
+}
+
 .input-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   margin-top: 8px;
 }
 
