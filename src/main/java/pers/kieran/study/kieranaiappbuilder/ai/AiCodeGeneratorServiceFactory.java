@@ -12,7 +12,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import pers.kieran.study.kieranaiappbuilder.ai.tools.FileWriteTool;
+import pers.kieran.study.kieranaiappbuilder.ai.tools.*;
 import pers.kieran.study.kieranaiappbuilder.exception.BusinessException;
 import pers.kieran.study.kieranaiappbuilder.exception.ErrorCode;
 import pers.kieran.study.kieranaiappbuilder.model.enums.CodeGenTypeEnum;
@@ -47,6 +47,9 @@ public class AiCodeGeneratorServiceFactory {
 
     @Resource
     private ChatHistoryService chatHistoryService;
+
+    @Resource
+    private ToolManager toolManager;
 
     /**
      * AI 服务实例缓存
@@ -113,7 +116,9 @@ public class AiCodeGeneratorServiceFactory {
             case VUE_PROJECT -> AiServices.builder(AiCodeGeneratorService.class)
                     .streamingChatModel(reasonStreamingChatModel)
                     .chatMemoryProvider(memoryId -> chatMemory)
-                    .tools(new FileWriteTool())
+                    .tools(
+                            toolManager.getAllTools()
+                    )
                     .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                             toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
                     ))
