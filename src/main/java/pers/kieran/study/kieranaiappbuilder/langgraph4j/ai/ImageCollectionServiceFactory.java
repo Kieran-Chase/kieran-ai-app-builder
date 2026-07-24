@@ -15,7 +15,7 @@ import pers.kieran.study.kieranaiappbuilder.langgraph4j.tools.UndrawIllustration
 @Configuration
 public class ImageCollectionServiceFactory {
 
-    @Resource
+    @Resource(name = "openAiChatModel")
     private ChatModel chatModel;
 
     @Resource

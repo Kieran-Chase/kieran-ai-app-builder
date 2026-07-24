@@ -10,6 +10,7 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import pers.kieran.study.kieranaiappbuilder.ai.AiCodeGenTypeRoutingService;
+import pers.kieran.study.kieranaiappbuilder.ai.AiCodeGenTypeRoutingServiceFactory;
 import pers.kieran.study.kieranaiappbuilder.constant.AppConstant;
 import pers.kieran.study.kieranaiappbuilder.core.AiCodeGeneratorFacade;
 import pers.kieran.study.kieranaiappbuilder.core.builder.VueProjectBuilder;
@@ -70,7 +71,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
     private ScreenshotService screenshotService;
 
     @Resource
-    private AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
+    private AiCodeGenTypeRoutingServiceFactory aiCodeGenTypeRoutingServiceFactory;
 
 
     @Override
@@ -114,7 +115,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         String codeGenType = appAddRequest.getCodeGenType();
         CodeGenTypeEnum selectedCodeGenType;
         if (StrUtil.isBlank(codeGenType)) {
-            selectedCodeGenType = aiCodeGenTypeRoutingService.routeCodeGenType(initPrompt);
+            AiCodeGenTypeRoutingService routingService =
+                    aiCodeGenTypeRoutingServiceFactory.createAiCodeGenTypeRoutingService();
+            selectedCodeGenType = routingService.routeCodeGenType(initPrompt);
         } else {
             selectedCodeGenType = CodeGenTypeEnum.getEnumByValue(codeGenType);
             ThrowUtils.throwIf(selectedCodeGenType == null, ErrorCode.PARAMS_ERROR, "代码生成类型错误");
