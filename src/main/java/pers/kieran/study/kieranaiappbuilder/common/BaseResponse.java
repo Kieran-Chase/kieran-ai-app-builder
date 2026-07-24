@@ -1,6 +1,7 @@
 package pers.kieran.study.kieranaiappbuilder.common;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import pers.kieran.study.kieranaiappbuilder.exception.ErrorCode;
 
 import java.io.Serializable;
@@ -15,6 +16,7 @@ import java.io.Serializable;
  * @param <T>
  */
 @Data
+@NoArgsConstructor
 public class BaseResponse<T> implements Serializable {
 
     private int code;
