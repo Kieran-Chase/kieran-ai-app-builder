@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import pers.kieran.study.kieranaiappbuilder.ai.guardrail.PromptSafetyInputGuardrail;
+import pers.kieran.study.kieranaiappbuilder.ai.guardrail.RetryOutputGuardrail;
 import pers.kieran.study.kieranaiappbuilder.ai.tools.*;
 import pers.kieran.study.kieranaiappbuilder.exception.BusinessException;
 import pers.kieran.study.kieranaiappbuilder.exception.ErrorCode;
@@ -119,7 +120,9 @@ public class AiCodeGeneratorServiceFactory {
                         .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                                 toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
                         ))
+                        .maxSequentialToolsInvocations(20)  // 最多连续调用 20 次工具
                         .inputGuardrails(new PromptSafetyInputGuardrail())  // 添加输入护轨
+                        //.outputGuardrails(new RetryOutputGuardrail())     // 添加输出护轨, 为了流式输出，这里不使用
                         .build();
             }
             // HTML 和多文件生成使用默认模型
@@ -131,6 +134,7 @@ public class AiCodeGeneratorServiceFactory {
                         .streamingChatModel(openAiStreamingChatModel)
                         .chatMemory(chatMemory)
                         .inputGuardrails(new PromptSafetyInputGuardrail())  // 添加输入护轨
+                        //.outputGuardrails(new RetryOutputGuardrail())     // 添加输出护轨, 为了流式输出，这里不使用
                         .build();
             }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR,
