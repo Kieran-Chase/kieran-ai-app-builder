@@ -293,9 +293,13 @@ const sendMessage = (content: string, backendContent = content) => {
   // 构造 SSE 请求地址（GET 请求，携带 cookie）
   const url = `${API_BASE_URL}/app/chat/gen/code?appId=${appId.value}&message=${encodeURIComponent(backendContent)}`
   eventSource = new EventSource(url, { withCredentials: true })
+  let streamCompleted = false
 
   // 接收消息片段
   eventSource.onmessage = (event) => {
+    if (streamCompleted) {
+      return
+    }
     if (!event.data) {
       return
     }
@@ -313,6 +317,10 @@ const sendMessage = (content: string, backendContent = content) => {
 
   // 生成结束事件
   eventSource.addEventListener('done', () => {
+    if (streamCompleted) {
+      return
+    }
+    streamCompleted = true
     closeSSE()
     generating.value = false
     aiMessage.loading = false
@@ -322,8 +330,38 @@ const sendMessage = (content: string, backendContent = content) => {
     fetchApp()
   })
 
+  // 处理业务错误事件（如后端限流）
+  eventSource.addEventListener('business-error', (event: MessageEvent) => {
+    if (streamCompleted) {
+      return
+    }
+    try {
+      const errorData = JSON.parse(event.data)
+      console.error('SSE 业务错误事件:', errorData)
+      const errorMessage = errorData.message || '生成过程中出现错误'
+      aiMessage.content = `❌ ${errorMessage}`
+      aiMessage.loading = false
+      message.error(errorMessage)
+      scrollToBottom()
+    } catch (parseError) {
+      console.error('解析错误事件失败:', parseError, '原始数据:', event.data)
+      aiMessage.content = '❌ 服务器返回错误'
+      aiMessage.loading = false
+      message.error('服务器返回错误')
+      scrollToBottom()
+    } finally {
+      streamCompleted = true
+      generating.value = false
+      closeSSE()
+    }
+  })
+
   // 出错处理
   eventSource.onerror = () => {
+    if (streamCompleted) {
+      return
+    }
+    streamCompleted = true
     closeSSE()
     generating.value = false
     aiMessage.loading = false

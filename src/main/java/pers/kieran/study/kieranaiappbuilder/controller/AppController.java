@@ -27,6 +27,8 @@ import pers.kieran.study.kieranaiappbuilder.model.entity.App;
 import pers.kieran.study.kieranaiappbuilder.model.entity.User;
 import pers.kieran.study.kieranaiappbuilder.model.enums.CodeGenTypeEnum;
 import pers.kieran.study.kieranaiappbuilder.model.vo.AppVO;
+import pers.kieran.study.kieranaiappbuilder.ratelimter.annotation.RateLimit;
+import pers.kieran.study.kieranaiappbuilder.ratelimter.enums.RateLimitType;
 import pers.kieran.study.kieranaiappbuilder.service.AppService;
 import pers.kieran.study.kieranaiappbuilder.service.ProjectDownloadService;
 import pers.kieran.study.kieranaiappbuilder.service.UserService;
@@ -57,6 +59,7 @@ public class AppController {
     private ProjectDownloadService projectDownloadService;
 
     @GetMapping(value = "/chat/gen/code",produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @RateLimit(limitType = RateLimitType.USER, rate = 5, rateInterval = 60, message = "AI 对话请求过于频繁，请稍后再试")
     public Flux<ServerSentEvent<String>> chatToGenCode(@RequestParam Long appId,@RequestParam String message,HttpServletRequest request){
         // 参数校验
         ThrowUtils.throwIf(appId==null||appId<=0,ErrorCode.PARAMS_ERROR,"应用 id 错误");
