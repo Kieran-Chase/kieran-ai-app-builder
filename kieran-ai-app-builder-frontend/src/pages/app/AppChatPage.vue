@@ -639,11 +639,16 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+:global(.content:has(#appChatPage)) {
+  background: #fff;
+}
+
 #appChatPage {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 64px - 70px);
   min-height: 500px;
+  background: #fff;
 }
 
 .header-bar {
@@ -718,7 +723,7 @@ onUnmounted(() => {
 }
 
 .message-user {
-  flex-direction: row-reverse;
+  justify-content: flex-end;
 }
 
 .msg-avatar {

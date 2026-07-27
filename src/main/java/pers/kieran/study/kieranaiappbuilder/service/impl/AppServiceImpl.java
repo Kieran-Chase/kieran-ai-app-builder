@@ -33,6 +33,8 @@ import pers.kieran.study.kieranaiappbuilder.service.ChatHistoryService;
 import pers.kieran.study.kieranaiappbuilder.service.ScreenshotService;
 import pers.kieran.study.kieranaiappbuilder.service.UserService;
 import reactor.core.publisher.Flux;
+import org.springframework.beans.factory.annotation.Value;
+
 
 import java.io.File;
 import java.io.Serializable;
@@ -51,6 +53,9 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppService{
+
+    @Value("${code.deploy-host:http://localhost}")
+    private String deployHost;
 
     @Resource
     private UserService userService;
@@ -182,7 +187,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         boolean updateResult = this.updateById(updateApp);
         ThrowUtils.throwIf(!updateResult, ErrorCode.OPERATION_ERROR, "更新应用部署信息失败");
         // 10. 构建应用访问 URL
-        String appDeployUrl = String.format("%s/%s/", AppConstant.CODE_DEPLOY_HOST, deployKey);
+        String appDeployUrl = String.format("%s/%s/", deployHost, deployKey);
         // 11. 异步生成截图并更新应用封面
         generateAppScreenshotAsync(appId, appDeployUrl);
         return appDeployUrl;

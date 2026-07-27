@@ -1,8 +1,7 @@
 <template>
-  <a-layout-header class="header">
+  <a-layout-header class="header" :class="{ 'chat-header': isChatPage }">
     <div class="header-content">
       <div class="logo-section">
-        <span class="logo">🤖</span>
         <span class="title">Kieran代码生成器</span>
       </div>
       <a-menu
@@ -39,7 +38,7 @@
 
 <script setup lang="ts">
 import { ref, h, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { MenuProps } from 'ant-design-vue'
 import { HomeOutlined, LogoutOutlined } from '@ant-design/icons-vue'
@@ -51,7 +50,9 @@ import checkAccess from '@/access/checkAccess'
 const loginUserStore = useLoginUserStore()
 
 const router = useRouter()
+const route = useRoute()
 const selectedKeys = ref<string[]>(['home'])
+const isChatPage = computed(() => route.path.startsWith('/app/chat/'))
 
 // 用户退出登录
 const doLogout = async () => {
@@ -133,12 +134,19 @@ const handleMenuClick = ({ key }: { key: string }) => {
 
 <style scoped>
 .header {
-  background: #fff;
+  /* background: 复用主体页面同一 135deg 柔雾浅渐变，保持上下无缝衔接 */
+  background: var(--app-soft-gradient);
+  background-attachment: fixed;
   padding: 0 50px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+.chat-header {
+  background: #fff;
+  background-attachment: initial;
 }
 
 .header-content {
@@ -154,11 +162,6 @@ const handleMenuClick = ({ key }: { key: string }) => {
   flex-shrink: 0;
 }
 
-.logo {
-  font-size: 32px;
-  line-height: 1;
-}
-
 .title {
   font-size: 18px;
   font-weight: 500;
@@ -167,6 +170,7 @@ const handleMenuClick = ({ key }: { key: string }) => {
 
 .menu {
   flex: 1;
+  background: transparent;
   border: none;
   margin: 0 40px;
 }
@@ -190,8 +194,5 @@ const handleMenuClick = ({ key }: { key: string }) => {
     font-size: 14px;
   }
 
-  .logo {
-    font-size: 28px;
-  }
 }
 </style>
