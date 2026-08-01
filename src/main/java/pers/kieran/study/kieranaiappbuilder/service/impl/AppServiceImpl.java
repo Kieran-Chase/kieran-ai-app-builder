@@ -27,6 +27,8 @@ import pers.kieran.study.kieranaiappbuilder.model.enums.ChatHistoryMessageTypeEn
 import pers.kieran.study.kieranaiappbuilder.model.enums.CodeGenTypeEnum;
 import pers.kieran.study.kieranaiappbuilder.model.vo.AppVO;
 import pers.kieran.study.kieranaiappbuilder.model.vo.UserVO;
+import pers.kieran.study.kieranaiappbuilder.monitor.MonitorContext;
+import pers.kieran.study.kieranaiappbuilder.monitor.MonitorContextHolder;
 import pers.kieran.study.kieranaiappbuilder.service.AppService;
 import org.springframework.stereotype.Service;
 import pers.kieran.study.kieranaiappbuilder.service.ChatHistoryService;
@@ -99,10 +101,23 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         }
         // 5. 在调用 AI 前，先保存用户到数据库中
         chatHistoryService.addChatMessage(appId,message, ChatHistoryMessageTypeEnum.USER.getValue(), loginUser.getId());
+        MonitorContext monitorContext = MonitorContext.builder()
+                .userId(loginUser.getId().toString())
+                .appId(appId.toString())
+                .build();
         // 6. 调用 AI 生成代码 (流式)
-        Flux<String> codeStream = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
-        // 7. 收集 AI 咸鱼的内容，并且再完成后保存记录到对话历史
-        return streamHandlerExecutor.doExecute(codeStream,chatHistoryService,appId,loginUser,codeGenTypeEnum);
+        return Flux.defer(() -> {
+            MonitorContextHolder.setContext(monitorContext);
+            try {
+                Flux<String> codeStream = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
+                // 7. 收集 AI 咸鱼的内容，并且再完成后保存记录到对话历史
+                return streamHandlerExecutor.doExecute(codeStream,chatHistoryService,appId,loginUser,codeGenTypeEnum)
+                        .doFinally(signalType -> MonitorContextHolder.clearContext());
+            } catch (Throwable e) {
+                MonitorContextHolder.clearContext();
+                return Flux.error(e);
+            }
+        });
     }
 
     @Override

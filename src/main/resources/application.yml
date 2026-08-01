@@ -49,3 +49,11 @@ r2:
     region: auto
     bucket: ai-cover-images
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always
